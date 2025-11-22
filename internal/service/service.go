@@ -11,12 +11,20 @@ import (
 	"links-checker/internal/repository"
 )
 
+const maxConcurrentChecks = 10
+
 type Service struct {
 	repo    repository.Repository
 	checker *checker.LinkChecker
 }
 
-func NewService(repo repository.Repository) *Service {
+type Repository interface {
+	SaveLinkCheck(check *domain.LinkCheckTask) (int64, error)
+	GetLinkCheck(id int64) (*domain.LinkCheckTask, error)
+	UpdateLinkStatus(checkID int64, url string, status domain.LinkStatus) error
+}
+
+func NewService(repo Repository) *Service {
 	return &Service{
 		repo:    repo,
 		checker: checker.New(),
@@ -31,7 +39,8 @@ func (s *Service) CheckLinks(urls []string) (int64, error) {
 			continue
 		}
 		links[i] = domain.Link{
-			URL:    url,
+			URL: url,
+			// добавляем в pending статусе, чтобы потенциальный будущий робот мог возобновлять те проверки, которые почему-то оборвались
 			Status: domain.StatusPending,
 		}
 	}
@@ -48,16 +57,23 @@ func (s *Service) CheckLinks(urls []string) (int64, error) {
 
 	ctx := context.Background()
 	var wg sync.WaitGroup
+	semaphore := make(chan bool, maxConcurrentChecks)
 
 	for _, url := range urls {
 		wg.Add(1)
-		go func(u string) {
+		go func() {
 			defer wg.Done()
-			status := s.checker.Check(ctx, u)
-			if err := s.repo.UpdateLinkStatus(taskID, u, status); err != nil {
-				log.Printf("Failed to update status for %s: %v", u, err)
+
+			semaphore <- true
+			defer func() {
+				<-semaphore
+			}()
+
+			status := s.checker.Check(ctx, url)
+			if err := s.repo.UpdateLinkStatus(taskID, url, status); err != nil {
+				log.Printf("Failed to update status for  %s: %v", url, err)
 			}
-		}(url)
+		}()
 	}
 
 	wg.Wait()

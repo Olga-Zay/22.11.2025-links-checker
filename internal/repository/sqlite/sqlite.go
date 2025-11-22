@@ -7,16 +7,21 @@ import (
 	"sort"
 
 	"links-checker/internal/domain"
-	"links-checker/internal/repository"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type Repository interface {
+	SaveLinkCheck(check *domain.LinkCheckTask) (int64, error)
+	GetLinkCheck(id int64) (*domain.LinkCheckTask, error)
+	UpdateLinkStatus(checkID int64, url string, status domain.LinkStatus) error
+}
 
 type sqliteRepository struct {
 	db *sql.DB
 }
 
-func New(dbPath string) (repository.Repository, error) {
+func New(dbPath string) (Repository, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open database err: %w", err)
@@ -56,6 +61,7 @@ func (r *sqliteRepository) initSchema() error {
 }
 
 func (r *sqliteRepository) SaveLinkCheck(check *domain.LinkCheckTask) (int64, error) {
+	//по хорошему надо переделать на использование моделей слоя БД, но т.к. задание тестовое, то кажется это не нужно
 	urls := make([]string, len(check.Links))
 	for i, link := range check.Links {
 		urls[i] = link.URL
@@ -67,15 +73,17 @@ func (r *sqliteRepository) SaveLinkCheck(check *domain.LinkCheckTask) (int64, er
 		return 0, fmt.Errorf("SaveLinkCheck marshal urls fail: %w", err)
 	}
 
+	// сначала проверим, может идентичное задание уже добавлялось и достаточно вернуть его ID
 	var existingID int64
 	err = r.db.QueryRow("SELECT id FROM link_check_tasks WHERE urls = ?", string(urlsJSON)).Scan(&existingID)
 	if err == nil {
 		return existingID, nil
-	}
-	if err != nil && err != sql.ErrNoRows {
+	} else if err != sql.ErrNoRows {
+		// если случалась какая-то другая ошибка, то мы не можем двигаться дальше, т.к. не знаем наверняка есть ли дубль задачи в БД
 		return 0, fmt.Errorf("check existing links fail: %w", err)
 	}
 
+	// так как таблицы две и в одну нужно положить задачу, а во вторую её части, то обязательно в рамках транзакции сделать
 	tx, err := r.db.Begin()
 	if err != nil {
 		return 0, fmt.Errorf("begin transaction fail: %w", err)
@@ -96,10 +104,9 @@ func (r *sqliteRepository) SaveLinkCheck(check *domain.LinkCheckTask) (int64, er
 	}
 
 	for _, link := range check.Links {
-		// добавляем в pending статусе, чтобы потенциальный робот мог возобновлять те проверки, которые почему-то оборвались
 		_, err = tx.Exec(
 			"INSERT INTO link_statuses (task_id, url, status) VALUES (?, ?, ?)",
-			id, link.URL, domain.StatusPending,
+			id, link.URL, link.Status,
 		)
 		if err != nil {
 			return 0, fmt.Errorf("insert link status fail: %w", err)

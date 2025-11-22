@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"links-checker/internal/dto"
@@ -38,23 +39,34 @@ func (h *Handler) checkLinks(w http.ResponseWriter, r *http.Request) {
 
 	var req dto.CheckLinksRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		//в нормальной задаче тут был бы логгер
+		log.Printf("Invalid request body: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	if len(req.Links) == 0 {
+		log.Printf("Links array is empty in req: %v", req)
 		http.Error(w, "Links array is empty", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Links) > 100 {
+		log.Printf("Too many links in task in req: %v", req)
+		http.Error(w, "Too many links in task", http.StatusBadRequest)
 		return
 	}
 
 	taskID, err := h.service.CheckLinks(req.Links)
 	if err != nil {
+		log.Printf("Failed to create check task: %v", err)
 		http.Error(w, "Failed to create check task", http.StatusInternalServerError)
 		return
 	}
 
 	checkTask, err := h.service.GetLinkCheckTaskResults(taskID)
 	if err != nil {
+		log.Printf("Failed to get check task: %v", err)
 		http.Error(w, "Failed to get check task", http.StatusInternalServerError)
 		return
 	}
@@ -82,13 +94,22 @@ func (h *Handler) generateReport(w http.ResponseWriter, r *http.Request) {
 
 	var req dto.GenerateReportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Invalid request body: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	if len(req.LinksList) == 0 {
+		log.Printf("Links list is empty in req: %v", req)
 		http.Error(w, "Links list is empty", http.StatusBadRequest)
 		return
 	}
+
+	if len(req.LinksList) > 100 {
+		log.Printf("Links list is too big in req: %v", req)
+		http.Error(w, "Links list is too big", http.StatusBadRequest)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }

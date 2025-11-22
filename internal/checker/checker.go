@@ -43,7 +43,7 @@ func (c *LinkChecker) Check(ctx context.Context, url string) domain.LinkStatus {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusBadRequest {
 		return domain.StatusAvailable
 	}
 
