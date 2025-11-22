@@ -15,7 +15,7 @@ type Link struct {
 	Status LinkStatus
 }
 
-type LinkCheck struct {
+type LinkCheckTask struct {
 	ID        int64
 	Links     []Link
 	CreatedAt time.Time
