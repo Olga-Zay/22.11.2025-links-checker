@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"links-checker/internal/dto"
+	"links-checker/internal/handler/dto"
 	"links-checker/internal/service"
 )
 

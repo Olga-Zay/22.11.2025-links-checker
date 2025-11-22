@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"links-checker/internal/checker"
 	"links-checker/internal/domain"
 	"links-checker/internal/pdf"
+	"links-checker/internal/service/checker"
 )
 
 const maxConcurrentChecks = 10

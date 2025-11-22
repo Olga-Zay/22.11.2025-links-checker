@@ -19,7 +19,7 @@ func Load() *Config {
 		ServerPort:      getEnv("SERVER_PORT", "8080"),
 		ReadTimeout:     10 * time.Second,
 		WriteTimeout:    10 * time.Second,
-		ShutdownTimeout: 10 * time.Second,
+		ShutdownTimeout: 30 * time.Second,
 		DBPath:          getEnv("DB_PATH", "links.db"),
 	}
 	return cfg
