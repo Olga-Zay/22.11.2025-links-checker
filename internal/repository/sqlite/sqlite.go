@@ -12,8 +12,8 @@ import (
 )
 
 type Repository interface {
-	SaveLinkCheck(check *domain.LinkCheckTask) (int64, error)
-	GetLinkCheck(id int64) (*domain.LinkCheckTask, error)
+	SaveLinkCheckTask(check *domain.LinkCheckTask) (int64, error)
+	GetLinkCheckTask(id int64) (*domain.LinkCheckTask, error)
 	UpdateLinkStatus(checkID int64, url string, status domain.LinkStatus) error
 }
 
@@ -60,7 +60,7 @@ func (r *sqliteRepository) initSchema() error {
 	return err
 }
 
-func (r *sqliteRepository) SaveLinkCheck(check *domain.LinkCheckTask) (int64, error) {
+func (r *sqliteRepository) SaveLinkCheckTask(check *domain.LinkCheckTask) (int64, error) {
 	//по хорошему надо переделать на использование моделей слоя БД, но т.к. задание тестовое, то кажется это не нужно
 	urls := make([]string, len(check.Links))
 	for i, link := range check.Links {
@@ -120,7 +120,7 @@ func (r *sqliteRepository) SaveLinkCheck(check *domain.LinkCheckTask) (int64, er
 	return id, nil
 }
 
-func (r *sqliteRepository) GetLinkCheck(id int64) (*domain.LinkCheckTask, error) {
+func (r *sqliteRepository) GetLinkCheckTask(id int64) (*domain.LinkCheckTask, error) {
 	var check domain.LinkCheckTask
 
 	err := r.db.QueryRow(
@@ -135,6 +135,7 @@ func (r *sqliteRepository) GetLinkCheck(id int64) (*domain.LinkCheckTask, error)
 		return nil, fmt.Errorf("get link check task fail: %w", err)
 	}
 
+	// для указанной задачи получаем результаты обработок всех ссылок
 	rows, err := r.db.Query(
 		"SELECT url, status FROM link_statuses WHERE task_id = ?",
 		id,

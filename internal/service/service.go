@@ -20,8 +20,8 @@ type Service struct {
 }
 
 type Repository interface {
-	SaveLinkCheck(check *domain.LinkCheckTask) (int64, error)
-	GetLinkCheck(id int64) (*domain.LinkCheckTask, error)
+	SaveLinkCheckTask(check *domain.LinkCheckTask) (int64, error)
+	GetLinkCheckTask(id int64) (*domain.LinkCheckTask, error)
 	UpdateLinkStatus(checkID int64, url string, status domain.LinkStatus) error
 }
 
@@ -51,14 +51,14 @@ func (s *Service) CheckLinks(urls []string) (int64, error) {
 		CreatedAt: time.Now(),
 	}
 
-	taskID, err := s.repo.SaveLinkCheck(checkTask)
+	taskID, err := s.repo.SaveLinkCheckTask(checkTask)
 	if err != nil {
 		return 0, err
 	}
 
 	ctx := context.Background()
 	var wg sync.WaitGroup
-	semaphore := make(chan bool, maxConcurrentChecks)
+	semaphore := make(chan bool, maxConcurrentChecks) // ограничиваем лавинообразный рост горутин, когда влетает куча объёмных задач
 
 	for _, url := range urls {
 		wg.Add(1)
@@ -83,7 +83,7 @@ func (s *Service) CheckLinks(urls []string) (int64, error) {
 }
 
 func (s *Service) GetLinkCheckTaskResults(id int64) (*domain.LinkCheckTask, error) {
-	return s.repo.GetLinkCheck(id)
+	return s.repo.GetLinkCheckTask(id)
 }
 
 func (s *Service) GeneratePDFReportForTaskIds(ids []int64) ([]byte, error) {
@@ -93,7 +93,7 @@ func (s *Service) GeneratePDFReportForTaskIds(ids []int64) ([]byte, error) {
 	// которые ещё не успели обработаться.
 	// То есть предполагаю, что на лету запускать проверку или ещё что-то делать не нужно пока что
 	for _, id := range ids {
-		task, err := s.repo.GetLinkCheck(id)
+		task, err := s.repo.GetLinkCheckTask(id)
 		if err != nil {
 			log.Printf("Failed to get task %d: %v", id, err)
 			continue
