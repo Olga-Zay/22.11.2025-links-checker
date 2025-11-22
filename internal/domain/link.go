@@ -1,0 +1,22 @@
+package domain
+
+import "time"
+
+type LinkStatus string
+
+const (
+	StatusAvailable    LinkStatus = "available"
+	StatusNotAvailable LinkStatus = "not available"
+	StatusPending      LinkStatus = "pending"
+)
+
+type Link struct {
+	URL    string
+	Status LinkStatus
+}
+
+type LinkCheck struct {
+	ID        int64
+	Links     []Link
+	CreatedAt time.Time
+}
