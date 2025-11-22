@@ -10,6 +10,7 @@ import (
 
 	"links-checker/internal/config"
 	"links-checker/internal/handler"
+	"links-checker/internal/repository/sqlite"
 	"links-checker/internal/service"
 )
 
@@ -17,7 +18,13 @@ func main() {
 	log.Println("Server start")
 
 	cfg := config.Load()
-	svc := service.NewService()
+
+	repo, err := sqlite.New(cfg.DBPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize repository: %v", err)
+	}
+
+	svc := service.NewService(repo)
 	h := handler.NewHandler(svc)
 
 	mux := http.NewServeMux()
@@ -37,7 +44,6 @@ func main() {
 		}
 	}()
 
-	// Ожидание сигнала завершения
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
@@ -47,7 +53,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
-	// Завершаем с ожиданием
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("Server shutdown error: %v", err)
 		return

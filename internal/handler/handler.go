@@ -47,13 +47,26 @@ func (h *Handler) checkLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// пока мок тут бахнем ддля проверки
+	taskID, err := h.service.CheckLinks(req.Links)
+	if err != nil {
+		http.Error(w, "Failed to create check task", http.StatusInternalServerError)
+		return
+	}
+
+	checkTask, err := h.service.GetLinkCheckTaskResults(taskID)
+	if err != nil {
+		http.Error(w, "Failed to get check task", http.StatusInternalServerError)
+		return
+	}
+
+	linksMap := make(map[string]string)
+	for _, link := range checkTask.Links {
+		linksMap[link.URL] = string(link.Status)
+	}
+
 	resp := dto.CheckLinksResponse{
-		Links: map[string]string{
-			"google.com":       "available",
-			"malformedlink.gg": "not available",
-		},
-		LinksNum: 1,
+		Links:    linksMap,
+		LinksNum: taskID,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
