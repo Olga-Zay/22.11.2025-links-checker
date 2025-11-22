@@ -2,19 +2,20 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log"
 	"sync"
 	"time"
 
 	"links-checker/internal/checker"
 	"links-checker/internal/domain"
-	"links-checker/internal/repository"
+	"links-checker/internal/pdf"
 )
 
 const maxConcurrentChecks = 10
 
 type Service struct {
-	repo    repository.Repository
+	repo    Repository
 	checker *checker.LinkChecker
 }
 
@@ -40,8 +41,8 @@ func (s *Service) CheckLinks(urls []string) (int64, error) {
 		}
 		links[i] = domain.Link{
 			URL: url,
-			// добавляем в pending статусе, чтобы потенциальный будущий робот мог возобновлять те проверки, которые почему-то оборвались
-			Status: domain.StatusPending,
+			// добавляем в unknown статусе, чтобы потенциальный будущий робот мог возобновлять те проверки, которые почему-то оборвались
+			Status: domain.StatusUnknown,
 		}
 	}
 
@@ -83,4 +84,26 @@ func (s *Service) CheckLinks(urls []string) (int64, error) {
 
 func (s *Service) GetLinkCheckTaskResults(id int64) (*domain.LinkCheckTask, error) {
 	return s.repo.GetLinkCheck(id)
+}
+
+func (s *Service) GeneratePDFReportForTaskIds(ids []int64) ([]byte, error) {
+	tasks := make([]*domain.LinkCheckTask, 0, len(ids))
+
+	// По результатам задачи кажется достаточно печатать результаты как есть, то есть даже те unknown,
+	// которые ещё не успели обработаться.
+	// То есть предполагаю, что на лету запускать проверку или ещё что-то делать не нужно пока что
+	for _, id := range ids {
+		task, err := s.repo.GetLinkCheck(id)
+		if err != nil {
+			log.Printf("Failed to get task %d: %v", id, err)
+			continue
+		}
+		tasks = append(tasks, task)
+	}
+
+	if len(tasks) == 0 {
+		return []byte{}, errors.New("No tasks found for report generation")
+	}
+
+	return pdf.GenerateReport(tasks)
 }

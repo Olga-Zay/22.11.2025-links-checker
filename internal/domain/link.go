@@ -7,7 +7,7 @@ type LinkStatus string
 const (
 	StatusAvailable    LinkStatus = "available"
 	StatusNotAvailable LinkStatus = "not available"
-	StatusPending      LinkStatus = "pending"
+	StatusUnknown      LinkStatus = "unknown"
 )
 
 type Link struct {

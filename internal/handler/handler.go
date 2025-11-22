@@ -87,7 +87,7 @@ func (h *Handler) checkLinks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) generateReport(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -111,5 +111,15 @@ func (h *Handler) generateReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pdfBytes, err := h.service.GeneratePDFReportForTaskIds(req.LinksList)
+	if err != nil {
+		log.Printf("Failed to generate PDF: %v", err)
+		http.Error(w, "Failed to generate PDF", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "attachment; filename=report.pdf")
 	w.WriteHeader(http.StatusOK)
+	w.Write(pdfBytes)
 }
