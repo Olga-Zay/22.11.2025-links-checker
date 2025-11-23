@@ -1,0 +1,67 @@
+{
+	"info": {
+		"_postman_id": "a5a70ce9-87c0-4b92-ab09-3d10ba5ad2ff",
+		"name": "Link Checker",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "8984440"
+	},
+	"item": [
+		{
+			"name": "Генерация PDF отчёта",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"links_list\": [4, 6, 3]}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:8080/api/report"
+			},
+			"response": []
+		},
+		{
+			"name": "Проверить новый список",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"links\": [\"google.com\", \"github123423223.com\"]}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:8080/api/check"
+			},
+			"response": []
+		},
+		{
+			"name": "ЛайфЧек",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": "localhost:8080/health"
+			},
+			"response": []
+		}
+	]
+}
